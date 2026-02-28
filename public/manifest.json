@@ -1,0 +1,39 @@
+{
+  "name": "ScamRadar - AI-Powered Fake Job Detection",
+  "short_name": "ScamRadar",
+  "description": "Protect yourself from job scams with AI-powered ML and Gemini deep analysis",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity", "security"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Analyze Job",
+      "short_name": "Analyze",
+      "description": "Quickly analyze a job posting",
+      "url": "/",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}
+
+
+
+
