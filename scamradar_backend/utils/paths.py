@@ -21,3 +21,4 @@ FAKE_INDICATORS_PATH = MODELS_DIR / "fake_indicators.json"
 
 
 
+

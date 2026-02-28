@@ -1,4 +1,4 @@
-export type FinalLabel = 'FAKE' | 'GENUINE';
+export type FinalLabel = 'LOW_RISK' | 'MODERATE_RISK' | 'HIGH_RISK' | 'CRITICAL_RISK' | 'FAKE' | 'GENUINE';
 
 export interface PredictRequest {
   title: string;
@@ -12,9 +12,12 @@ export interface PredictRequest {
 export interface PredictResponse {
   final_label: FinalLabel;
   reasoning: string[];
+  ml_probability: number;
 }
 
 export interface AIAnalysis {
+  risk_level: string;
+  confidence: number;
   manipulation_signals: string;
   tone_analysis: string;
   company_risk_analysis: string;
@@ -23,6 +26,10 @@ export interface AIAnalysis {
 }
 
 export interface DeepAnalysisResponse {
+  ml_probability: number;
+  rule_score: number;
+  gemini_risk_level: string | null;
+  final_risk_score: number;
   final_label: FinalLabel;
   ml_reasoning: string[];
   ai_analysis: AIAnalysis | null;
@@ -38,6 +45,7 @@ export interface ScanHistoryItem {
 }
 
 export type ScanMode = 'quick' | 'detailed';
+
 
 
 

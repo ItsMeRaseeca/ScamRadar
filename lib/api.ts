@@ -1,5 +1,5 @@
 import axios, { AxiosError } from 'axios';
-import type { DeepAnalysisResponse, PredictRequest } from './types';
+import type { DeepAnalysisResponse, PredictRequest, PredictResponse } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -36,7 +36,7 @@ export async function analyzeJobDeep(
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ detail?: string }>;
-      
+
       if (axiosError.response) {
         // Server responded with error status
         const message =
@@ -50,7 +50,7 @@ export async function analyzeJobDeep(
         );
       }
     }
-    
+
     // Unknown error
     throw new Error(
       error instanceof Error ? error.message : 'An unexpected error occurred'
@@ -64,7 +64,7 @@ export async function analyzeJobDeep(
  */
 export async function analyzeJobBasic(
   data: Partial<PredictRequest>
-): Promise<{ final_label: 'FAKE' | 'GENUINE'; reasoning: string[] }> {
+): Promise<PredictResponse> {
   try {
     const response = await apiClient.post('/predict', {
       title: data.title || '',
@@ -78,7 +78,7 @@ export async function analyzeJobBasic(
   } catch (error) {
     if (axios.isAxiosError(error)) {
       const axiosError = error as AxiosError<{ detail?: string }>;
-      
+
       if (axiosError.response) {
         const message =
           axiosError.response.data?.detail ||
@@ -90,7 +90,7 @@ export async function analyzeJobBasic(
         );
       }
     }
-    
+
     throw new Error(
       error instanceof Error ? error.message : 'An unexpected error occurred'
     );

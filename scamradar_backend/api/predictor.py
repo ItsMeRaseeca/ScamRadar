@@ -64,6 +64,7 @@ class PredictionResult:
     reasoning: list[str]
     score: float  # model probability for FAKE class
     threshold: float  # tuned decision threshold
+    rule_score: float
 
 
 class ScamRadarPredictor:
@@ -88,6 +89,7 @@ class ScamRadarPredictor:
                 reasoning=["Insufficient information to classify."],
                 score=0.0,
                 threshold=self.artifacts.threshold,
+                rule_score=0.0,
             )
 
         clean = self.preprocessor.preprocess(raw_joined)
@@ -95,6 +97,9 @@ class ScamRadarPredictor:
             return PredictionResult(
                 final_label="GENUINE",
                 reasoning=["Insufficient information to classify."],
+                score=0.0,
+                threshold=self.artifacts.threshold,
+                rule_score=0.0,
             )
 
         X = self.artifacts.vectorizer.transform([clean])
@@ -102,14 +107,16 @@ class ScamRadarPredictor:
         is_fake = score >= self.artifacts.threshold
         final_label = "FAKE" if is_fake else "GENUINE"
 
-        # Collect rule-based reasons first (these drive the main explanation)
-        rule_reasons = rule_based_red_flags(
+        # Collect rule-based reasons and score
+        rules_res = rule_based_red_flags(
             title=title or "",
             description=description or "",
             requirements=requirements or "",
             company_profile=company_profile or "",
             salary_range=salary_range,
-        ).reasons
+        )
+        rule_reasons = rules_res.reasons
+        rule_score = rules_res.score
 
         # Categorise rule-based reasons for clearer structure
         critical_red_flags: list[str] = []
@@ -214,6 +221,7 @@ class ScamRadarPredictor:
             reasoning=reasons,
             score=score,
             threshold=self.artifacts.threshold,
+            rule_score=rule_score,
         )
 
 

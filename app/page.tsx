@@ -6,7 +6,6 @@ import toast from 'react-hot-toast';
 import AnalyzerForm from '@/components/AnalyzerForm';
 import ResultCard from '@/components/ResultCard';
 import AIAnalysisSection from '@/components/AIAnalysisSection';
-import SafetyPanel from '@/components/SafetyPanel';
 import HistorySidebar from '@/components/HistorySidebar';
 import { analyzeJobDeep, analyzeJobBasic } from '@/lib/api';
 import { saveScanHistory } from '@/lib/storage';
@@ -15,7 +14,6 @@ import type { DeepAnalysisResponse, ScanHistoryItem } from '@/lib/types';
 export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<DeepAnalysisResponse | null>(null);
-  const [originalText, setOriginalText] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
   const [isDeepLoading, setIsDeepLoading] = useState(false);
   const [lastRequest, setLastRequest] = useState<{
@@ -38,17 +36,6 @@ export default function Home() {
     setIsLoading(true);
     setResult(null);
     setLastRequest(data);
-    
-    // Store original text for highlighting
-    const fullText = [
-      data.title,
-      data.description,
-      data.requirements,
-      data.company_profile,
-    ]
-      .filter(Boolean)
-      .join('\n\n');
-    setOriginalText(fullText);
 
     try {
       // First run: ML-only deep analysis (Gemini optional)
@@ -76,11 +63,15 @@ export default function Home() {
       toast.success('Analysis complete!');
     } catch (error) {
       console.error('Deep analysis failed, trying basic ML:', error);
-      
+
       // Fallback to basic ML prediction
       try {
         const basicResponse = await analyzeJobBasic(data);
         const fallbackResult: DeepAnalysisResponse = {
+          ml_probability: basicResponse.ml_probability || 0,
+          rule_score: 0,
+          gemini_risk_level: null,
+          final_risk_score: basicResponse.ml_probability || 0,
           final_label: basicResponse.final_label,
           ml_reasoning: basicResponse.reasoning,
           ai_analysis: null,
@@ -98,7 +89,7 @@ export default function Home() {
         });
 
         toast.success('ML analysis complete (AI analysis unavailable)');
-        
+
         setTimeout(() => {
           document.getElementById('results')?.scrollIntoView({
             behavior: 'smooth',
@@ -120,13 +111,16 @@ export default function Home() {
 
   const handleSelectHistoryItem = (item: ScanHistoryItem) => {
     const historyResult: DeepAnalysisResponse = {
+      ml_probability: 0,
+      rule_score: 0,
+      gemini_risk_level: item.ai_analysis?.risk_level || null,
+      final_risk_score: 0, // We could derive this if saved in history, but 0 is safe for now
       final_label: item.result,
       ml_reasoning: item.ml_reasoning,
       ai_analysis: item.ai_analysis,
     };
     setResult(historyResult);
-    setOriginalText(item.preview);
-    
+
     setTimeout(() => {
       document.getElementById('results')?.scrollIntoView({
         behavior: 'smooth',
@@ -241,6 +235,7 @@ export default function Home() {
             <ResultCard
               label={result.final_label}
               mlReasoning={result.ml_reasoning}
+              riskScore={result.final_risk_score}
               hasAIAnalysis={!!result.ai_analysis}
               onRunDeepReview={handleRunDeepReview}
               isDeepLoading={isDeepLoading}
@@ -260,15 +255,6 @@ export default function Home() {
                   signals were detected by the AI system.
                 </p>
               </motion.div>
-            )}
-
-            {/* Safety Panel with Highlighted Text */}
-            {originalText && (
-              <SafetyPanel
-                label={result.final_label}
-                mlReasoning={result.ml_reasoning}
-                originalText={originalText}
-              />
             )}
           </div>
         )}

@@ -127,13 +127,17 @@ def analyze_job_with_gemini(
         )
 
         prompt = f"""You are a senior employment fraud analyst. Analyze this job posting for fraud signals.
+Provide a final risk assessment of LOW, MODERATE, HIGH, or CRITICAL.
+
 Respond ONLY with valid JSON in this format:
 {{
-  "manipulation_signals": "...",
-  "tone_analysis": "...",
-  "company_risk_analysis": "...",
-  "overall_summary": "...",
-  "safety_advice": "..."
+  "risk_level": "LOW | MODERATE | HIGH | CRITICAL",
+  "confidence": 0.0-1.0,
+  "manipulation_signals": "Describe any manipulation or pressure tactics used.",
+  "tone_analysis": "Analyze the tone and language patterns.",
+  "company_risk_analysis": "Assess company credibility based on the text.",
+  "overall_summary": "Provide a concise summary of results.",
+  "safety_advice": "Practical advice for the seeker."
 }}
 
 Job Posting:
@@ -174,6 +178,26 @@ Job Posting:
 
         analysis_dict = json.loads(response_text)
 
+        # Validate required keys
+        required_keys = [
+            "risk_level",
+            "confidence",
+            "manipulation_signals",
+            "tone_analysis",
+            "company_risk_analysis",
+            "overall_summary",
+            "safety_advice",
+        ]
+        for key in required_keys:
+            if key not in analysis_dict:
+                logger.warning(f"Gemini response missing key: {key}")
+                if key == "risk_level":
+                    analysis_dict[key] = "MODERATE"
+                elif key == "confidence":
+                    analysis_dict[key] = 0.5
+                else:
+                    analysis_dict[key] = "Analysis unavailable."
+
         if cache_key:
             _ANALYSIS_CACHE[cache_key] = analysis_dict
 
@@ -202,19 +226,15 @@ def create_ai_analysis_object(
         return None
 
     return {
+        "risk_level": analysis_dict.get("risk_level", "MODERATE"),
+        "confidence": float(analysis_dict.get("confidence", 0.5)),
         "manipulation_signals": analysis_dict.get(
             "manipulation_signals", "Analysis unavailable."
         ),
-        "tone_analysis": analysis_dict.get(
-            "tone_analysis", "Analysis unavailable."
-        ),
+        "tone_analysis": analysis_dict.get("tone_analysis", "Analysis unavailable."),
         "company_risk_analysis": analysis_dict.get(
             "company_risk_analysis", "Analysis unavailable."
         ),
-        "overall_summary": analysis_dict.get(
-            "overall_summary", "Analysis unavailable."
-        ),
-        "safety_advice": analysis_dict.get(
-            "safety_advice", "Analysis unavailable."
-        ),
+        "overall_summary": analysis_dict.get("overall_summary", "Analysis unavailable."),
+        "safety_advice": analysis_dict.get("safety_advice", "Analysis unavailable."),
     }

@@ -34,6 +34,7 @@ class PredictRequest(BaseModel):
 class PredictResponse(BaseModel):
     final_label: str
     reasoning: list[str]
+    ml_probability: float | None = None
 
 
 class DeepAnalysisRequest(PredictRequest):
@@ -41,6 +42,8 @@ class DeepAnalysisRequest(PredictRequest):
 
 
 class AIAnalysis(BaseModel):
+    risk_level: str  # LOW | MODERATE | HIGH | CRITICAL
+    confidence: float
     manipulation_signals: str
     tone_analysis: str
     company_risk_analysis: str
@@ -49,6 +52,10 @@ class AIAnalysis(BaseModel):
 
 
 class DeepAnalysisResponse(BaseModel):
+    ml_probability: float
+    rule_score: float
+    gemini_risk_level: str | None
+    final_risk_score: float
     final_label: str
     ml_reasoning: list[str]
     ai_analysis: AIAnalysis | None = None

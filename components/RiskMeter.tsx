@@ -6,6 +6,7 @@ import type { FinalLabel } from '@/lib/types';
 
 interface RiskMeterProps {
   label: FinalLabel;
+  riskScore?: number;
   mlReasonCount: number;
   hasPositiveSignals: boolean;
   className?: string;
@@ -13,18 +14,22 @@ interface RiskMeterProps {
 
 export default function RiskMeter({
   label,
+  riskScore,
   mlReasonCount,
   hasPositiveSignals,
   className = '',
 }: RiskMeterProps) {
   let percentage: number;
 
-  if (label === 'FAKE') {
-    // Base 60% + 10% per ML reasoning item, capped at 95%
+  if (riskScore !== undefined) {
+    // If we have an exact score from arbitration, use it.
+    percentage = Math.round(riskScore * 100);
+  } else if (label === 'FAKE' || label === 'CRITICAL_RISK' || label === 'HIGH_RISK') {
+    // Heuristic fallback for legacy/basic mode
     percentage = 60 + mlReasonCount * 10;
     percentage = Math.min(percentage, 95);
   } else {
-    // Base 15% + 5% if positive credibility signals exist, capped at 35%
+    // Heuristic fallback for low risk
     percentage = 15;
     if (hasPositiveSignals) {
       percentage += 5;
@@ -32,8 +37,11 @@ export default function RiskMeter({
     percentage = Math.min(percentage, 35);
   }
 
-  const color = label === 'FAKE' ? '#ef4444' : '#10b981';
-  const trailColor = label === 'FAKE' ? '#fee2e2' : '#d1fae5';
+  const isHighRisk = label === 'HIGH_RISK' || label === 'CRITICAL_RISK' || label === 'FAKE';
+  const isModerateRisk = label === 'MODERATE_RISK';
+
+  const color = isHighRisk ? '#ef4444' : isModerateRisk ? '#f59e0b' : '#10b981';
+  const trailColor = isHighRisk ? '#fee2e2' : isModerateRisk ? '#fef3c7' : '#d1fae5';
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
@@ -46,7 +54,6 @@ export default function RiskMeter({
             textColor: color,
             trailColor: trailColor,
             textSize: '20px',
-            fontWeight: 'bold',
           })}
         />
       </div>

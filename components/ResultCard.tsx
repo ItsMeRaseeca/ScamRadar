@@ -7,6 +7,7 @@ import type { FinalLabel } from '@/lib/types';
 interface ResultCardProps {
   label: FinalLabel;
   mlReasoning: string[];
+  riskScore?: number;
   hasAIAnalysis?: boolean;
   onRunDeepReview?: () => void;
   isDeepLoading?: boolean;
@@ -16,23 +17,35 @@ interface ResultCardProps {
 export default function ResultCard({
   label,
   mlReasoning,
+  riskScore,
   hasAIAnalysis = false,
   onRunDeepReview,
   isDeepLoading = false,
   className = '',
 }: ResultCardProps) {
-  const isFake = label === 'FAKE';
-  const bgGradient = isFake
+  const isHighRisk = label === 'HIGH_RISK' || label === 'CRITICAL_RISK' || label === 'FAKE';
+  const isModerateRisk = label === 'MODERATE_RISK';
+
+  const bgGradient = isHighRisk
     ? 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20'
-    : 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
-  const borderColor = isFake
+    : isModerateRisk
+      ? 'from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20'
+      : 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
+
+  const borderColor = isHighRisk
     ? 'border-red-300 dark:border-red-700'
-    : 'border-green-300 dark:border-green-700';
-  const badgeBg = isFake
+    : isModerateRisk
+      ? 'border-yellow-300 dark:border-yellow-700'
+      : 'border-green-300 dark:border-green-700';
+
+  const badgeBg = isHighRisk
     ? 'bg-red-500 dark:bg-red-600'
-    : 'bg-green-500 dark:bg-green-600';
-  const badgeEmoji = isFake ? '🔴' : '🟢';
-  const badgeText = isFake ? 'High Risk' : 'Low Risk';
+    : isModerateRisk
+      ? 'bg-yellow-500 dark:bg-yellow-600'
+      : 'bg-green-500 dark:bg-green-600';
+
+  const badgeEmoji = isHighRisk ? '🔴' : isModerateRisk ? '🟠' : '🟢';
+  const badgeText = label.replace('_', ' ');
 
   const mlReasonCount = mlReasoning.length;
   const hasPositiveSignals = mlReasoning.some((reason) =>
@@ -54,6 +67,7 @@ export default function ResultCard({
         {/* Risk Meter */}
         <RiskMeter
           label={label}
+          riskScore={riskScore}
           mlReasonCount={mlReasonCount}
           hasPositiveSignals={hasPositiveSignals}
         />
@@ -101,11 +115,10 @@ export default function ResultCard({
                   type="button"
                   onClick={onRunDeepReview}
                   disabled={isDeepLoading}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors ${
-                    isFake
-                      ? 'bg-purple-600 hover:bg-purple-700'
-                      : 'bg-indigo-600 hover:bg-indigo-700'
-                  } ${isDeepLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors ${isHighRisk
+                    ? 'bg-purple-600 hover:bg-purple-700'
+                    : 'bg-indigo-600 hover:bg-indigo-700'
+                    } ${isDeepLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   {isDeepLoading ? (
                     <>
@@ -114,9 +127,9 @@ export default function ResultCard({
                     </>
                   ) : (
                     <>
-                      <span>{isFake ? '🔍' : '🔎'}</span>
+                      <span>{isHighRisk ? '🔍' : '🔎'}</span>
                       <span>
-                        {isFake
+                        {isHighRisk
                           ? 'Run Deep AI Investigation'
                           : 'Run Advanced Credibility Review'}
                       </span>

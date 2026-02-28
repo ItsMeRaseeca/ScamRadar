@@ -40,6 +40,7 @@ _COMPANY_SECTION_KEYWORDS = [
 @dataclass(frozen=True)
 class RuleReasons:
     reasons: list[str]
+    score: float
 
 
 def has_urgency_language(text: str) -> bool:
@@ -60,6 +61,7 @@ def rule_based_red_flags(
     salary_range: str | None = None,
 ) -> RuleReasons:
     reasons: list[str] = []
+    score = 0.0
 
     joined = " ".join([title or "", description or "", requirements or "", company_profile or ""]).strip()
     joined_lower = joined.lower()
@@ -67,6 +69,7 @@ def rule_based_red_flags(
     # Urgency language
     if has_urgency_language(joined):
         reasons.append("Uses urgency language (e.g., 'apply now', 'urgent').")
+        score += 0.2
 
     # Generic email providers
     emails = _EMAIL_RE.findall(joined)
@@ -74,10 +77,12 @@ def rule_based_red_flags(
         domains = {d.lower() for d in emails}
         if any(d in _GENERIC_EMAIL_DOMAINS for d in domains):
             reasons.append("Contains a generic email provider address (e.g., gmail/yahoo/outlook).")
+            score += 0.3
 
     # Excessive exclamation marks
     if _EXCLAMATION_RE.search(joined):
         reasons.append("Uses excessive exclamation marks (overly promotional).")
+        score += 0.1
 
     # Company profile presence:
     # - If structured company_profile is provided, treat as present.
@@ -87,11 +92,13 @@ def rule_based_red_flags(
     has_company_keywords = any(kw in joined_lower for kw in _COMPANY_SECTION_KEYWORDS)
     if not has_structured_company_profile and not has_company_keywords:
         reasons.append("Missing company profile.")
+        score += 0.2
 
     # Too-short description
     desc = (description or "").strip()
     if len(desc) > 0 and len(desc) < 120:
         reasons.append("Job description is unusually short.")
+        score += 0.1
 
     # Salary oddities (very simple heuristic; avoids probabilities)
     sal = (salary_range or "").strip()
@@ -103,10 +110,11 @@ def rule_based_red_flags(
                 amount = int(raw)
                 if amount >= 5000 and _HIGH_SALARY_HINTS.search(sal):
                     reasons.append("Salary claims look unusually high for the stated period.")
+                    score += 0.3
             except ValueError:
                 pass
 
-    return RuleReasons(reasons=reasons)
+    return RuleReasons(reasons=reasons, score=min(score, 1.0))
 
 
 
