@@ -10,34 +10,38 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        fake: {
-          DEFAULT: '#ef4444',
-          light: '#fee2e2',
-          dark: '#dc2626',
+        primary: {
+          DEFAULT: '#002395',
+          dark: '#001a75',
+          light: '#e6e9f4',
         },
-        genuine: {
-          DEFAULT: '#10b981',
-          light: '#d1fae5',
-          dark: '#059669',
-        },
-        ai: {
-          DEFAULT: '#6366f1',
-          light: '#e0e7ff',
-          dark: '#4f46e5',
+        risk: {
+          red: '#D32F2F',
+          yellow: '#FBC02D',
+          green: '#388E3C',
         },
       },
+      boxShadow: {
+        'brutal': '4px 4px 0px 0px #111827',
+        'brutal-sm': '2px 2px 0px 0px #111827',
+        'brutal-md': '6px 6px 0px 0px #111827',
+        'brutal-lg': '8px 8px 0px 0px #111827',
+        'brutal-primary': '4px 4px 0px 0px #002395',
+      },
+      borderWidth: {
+        '3': '3px',
+      },
       animation: {
-        'fade-in': 'fadeIn 0.5s ease-in-out',
-        'slide-up': 'slideUp 0.5s ease-out',
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'fade-in': 'fadeIn 0.2s ease-in-out',
+        'subtle-pop': 'subtlePop 0.3s ease-out',
       },
       keyframes: {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
-        slideUp: {
-          '0%': { transform: 'translateY(20px)', opacity: '0' },
+        subtlePop: {
+          '0%': { transform: 'translateY(4px)', opacity: '0' },
           '100%': { transform: 'translateY(0)', opacity: '1' },
         },
       },
@@ -47,6 +51,9 @@ const config: Config = {
 };
 
 export default config;
+
+
+
 
 
 

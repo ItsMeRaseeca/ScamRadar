@@ -19,11 +19,13 @@ export default function HistorySidebar({
   const [history, setHistory] = useState<ScanHistoryItem[]>([]);
 
   useEffect(() => {
-    setHistory(getScanHistory());
+    if (isOpen) {
+      setHistory(getScanHistory());
+    }
   }, [isOpen]);
 
   const handleClear = () => {
-    if (confirm('Clear all scan history?')) {
+    if (confirm('ERASE ALL ARCHIVED DATA?')) {
       clearScanHistory();
       setHistory([]);
     }
@@ -31,17 +33,7 @@ export default function HistorySidebar({
 
   const formatDate = (timestamp: string) => {
     const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' // ' + date.toLocaleDateString();
   };
 
   return (
@@ -54,7 +46,7 @@ export default function HistorySidebar({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/50 z-40 md:hidden"
+            className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-40"
           />
 
           {/* Sidebar */}
@@ -63,30 +55,21 @@ export default function HistorySidebar({
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 h-full w-80 md:w-96 bg-white dark:bg-gray-800 shadow-2xl z-50 overflow-y-auto"
+            className="fixed right-0 top-0 h-full w-full md:w-[400px] bg-white border-l-2 border-black z-50 overflow-y-auto flex flex-col"
           >
-            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-200">
-                  Scan History
-                </h2>
+            {/* Header */}
+            <div className="p-8 border-b-2 border-black bg-white sticky top-0 z-10 flex flex-col gap-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="section-label mb-1">Investigation Archive</div>
+                  <h2 className="title-h2 text-2xl">History Log</h2>
+                </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  aria-label="Close sidebar"
+                  className="bg-white text-black border-2 border-black p-2 hover:bg-black hover:text-white transition-all"
                 >
-                  <svg
-                    className="w-6 h-6 text-gray-600 dark:text-gray-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
@@ -94,60 +77,73 @@ export default function HistorySidebar({
               {history.length > 0 && (
                 <button
                   onClick={handleClear}
-                  className="text-sm text-red-500 hover:text-red-700 dark:hover:text-red-400"
+                  className="text-[10px] font-black uppercase tracking-widest text-risk-red border-b-2 border-transparent hover:border-risk-red self-start transition-all"
                 >
-                  Clear All
+                  Purge Diagnostic Archive
                 </button>
               )}
             </div>
 
-            <div className="p-4 space-y-3">
+            {/* List */}
+            <div className="p-8 space-y-6 flex-grow">
               {history.length === 0 ? (
-                <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-                  <p>No scan history yet.</p>
-                  <p className="text-sm mt-2">Your scans will appear here.</p>
+                <div className="text-center py-20">
+                  <p className="text-sm font-black uppercase tracking-widest text-gray-300">No telemetry captured</p>
                 </div>
               ) : (
-                history.map((item) => (
-                  <motion.div
-                    key={item.id}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    onClick={() => {
-                      onSelectItem(item);
-                      onClose();
-                    }}
-                    className={`p-4 rounded-lg border-2 cursor-pointer transition-all hover:shadow-md ${
-                      item.result === 'FAKE'
-                        ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'
-                        : 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between mb-2">
-                      <span
-                        className={`px-2 py-1 rounded text-xs font-semibold ${
-                          item.result === 'FAKE'
-                            ? 'bg-red-500 text-white'
-                            : 'bg-green-500 text-white'
-                        }`}
-                      >
-                        {item.result}
-                      </span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatDate(item.timestamp)}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 line-clamp-2">
-                      {item.preview}
-                    </p>
-                    {item.ai_analysis && (
-                      <span className="inline-block mt-2 text-xs text-indigo-600 dark:text-indigo-400">
-                        ✨ AI Analysis Available
-                      </span>
-                    )}
-                  </motion.div>
-                ))
+                history.map((item, index) => {
+                  const isHighRisk = item.result === 'FAKE' || item.result === 'HIGH_RISK' || item.result === 'CRITICAL_RISK';
+                  const isModerateRisk = item.result === 'MODERATE_RISK';
+
+                  const badgeColor = isHighRisk
+                    ? 'bg-risk-red text-white'
+                    : isModerateRisk
+                      ? 'bg-risk-yellow text-black'
+                      : 'bg-risk-green text-white';
+
+                  return (
+                    <motion.div
+                      key={item.id || index}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.05 }}
+                      onClick={() => {
+                        onSelectItem(item);
+                        onClose();
+                      }}
+                      className="group cursor-pointer"
+                    >
+                      <div className="p-5 border-2 border-black bg-white transition-all group-hover:shadow-brutal group-hover:-translate-x-0.5 group-hover:-translate-y-0.5">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className={`badge-risk ${badgeColor}`}>
+                            {item.result}
+                          </div>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                            {formatDate(item.timestamp)}
+                          </span>
+                        </div>
+                        <p className="font-bold text-sm leading-snug text-gray-900 line-clamp-2 uppercase tracking-tight">
+                          {item.preview}
+                        </p>
+                        {item.ai_analysis && (
+                          <div className="mt-4 flex items-center gap-2">
+                            <div className="text-[9px] font-black uppercase tracking-widest text-primary border-2 border-primary px-2 py-0.5">
+                              Deep Analysed
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })
               )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-8 border-t-2 border-black/5 bg-gray-50/50">
+              <p className="text-[10px] font-medium text-gray-400 leading-relaxed italic">
+                Logs are stored locally in the secure browser container. Purging session data will permanently erase results.
+              </p>
             </div>
           </motion.div>
         </>
@@ -155,6 +151,9 @@ export default function HistorySidebar({
     </AnimatePresence>
   );
 }
+
+
+
 
 
 

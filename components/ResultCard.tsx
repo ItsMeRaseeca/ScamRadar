@@ -26,26 +26,11 @@ export default function ResultCard({
   const isHighRisk = label === 'HIGH_RISK' || label === 'CRITICAL_RISK' || label === 'FAKE';
   const isModerateRisk = label === 'MODERATE_RISK';
 
-  const bgGradient = isHighRisk
-    ? 'from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20'
+  const riskBadgeColor = isHighRisk
+    ? 'bg-risk-red text-white'
     : isModerateRisk
-      ? 'from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20'
-      : 'from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20';
-
-  const borderColor = isHighRisk
-    ? 'border-red-300 dark:border-red-700'
-    : isModerateRisk
-      ? 'border-yellow-300 dark:border-yellow-700'
-      : 'border-green-300 dark:border-green-700';
-
-  const badgeBg = isHighRisk
-    ? 'bg-red-500 dark:bg-red-600'
-    : isModerateRisk
-      ? 'bg-yellow-500 dark:bg-yellow-600'
-      : 'bg-green-500 dark:bg-green-600';
-
-  const badgeEmoji = isHighRisk ? '🔴' : isModerateRisk ? '🟠' : '🟢';
-  const badgeText = label.replace('_', ' ');
+      ? 'bg-risk-yellow text-black'
+      : 'bg-risk-green text-white';
 
   const mlReasonCount = mlReasoning.length;
   const hasPositiveSignals = mlReasoning.some((reason) =>
@@ -57,91 +42,90 @@ export default function ResultCard({
   );
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className={`rounded-2xl border-2 ${borderColor} bg-gradient-to-br ${bgGradient} p-6 shadow-lg ${className}`}
-    >
-      <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
-        {/* Risk Meter */}
-        <RiskMeter
-          label={label}
-          riskScore={riskScore}
-          mlReasonCount={mlReasonCount}
-          hasPositiveSignals={hasPositiveSignals}
-        />
-
-        {/* Content */}
-        <div className="flex-1">
-          {/* Badge */}
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">{badgeEmoji}</span>
-            <span
-              className={`px-4 py-2 rounded-full text-white font-semibold ${badgeBg}`}
-            >
-              {badgeText}
-            </span>
-            <span className="text-lg font-bold text-gray-800 dark:text-gray-200">
-              {label}
-            </span>
+    <div className={`card-brutal p-0 overflow-hidden bg-white ${className}`}>
+      {/* Header */}
+      <div className="border-b-[3px] border-gray-900 p-6 bg-gray-50 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className={`badge-risk ${riskBadgeColor} shadow-brutal`}>
+            {label.replace('_', ' ')}
           </div>
+          <h2 className="text-xl font-black uppercase tracking-tight text-gray-900">
+            Analysis Report
+          </h2>
+        </div>
 
-          {/* Structured Analysis */}
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3">
-              Structured Analysis
-            </h3>
-            <ul className="space-y-2">
-              {mlReasoning.map((reason, index) => (
-                <motion.li
-                  key={index}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-start gap-2 text-gray-700 dark:text-gray-300"
-                >
-                  <span className="text-gray-400 dark:text-gray-500 mt-1">
-                    •
-                  </span>
-                  <span>{reason}</span>
-                </motion.li>
-              ))}
-            </ul>
+        {riskScore !== undefined && (
+          <div className="badge-risk bg-gray-900 text-white shadow-brutal">
+            Risk: {Math.round(riskScore * 100)}%
+          </div>
+        )}
+      </div>
 
-            {onRunDeepReview && !hasAIAnalysis && (
-              <div className="mt-6">
-                <button
-                  type="button"
-                  onClick={onRunDeepReview}
-                  disabled={isDeepLoading}
-                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-colors ${isHighRisk
-                    ? 'bg-purple-600 hover:bg-purple-700'
-                    : 'bg-indigo-600 hover:bg-indigo-700'
-                    } ${isDeepLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                >
-                  {isDeepLoading ? (
-                    <>
-                      <span className="h-4 w-4 border-2 border-white/60 border-t-transparent rounded-full animate-spin" />
-                      Running deep AI review...
-                    </>
-                  ) : (
-                    <>
-                      <span>{isHighRisk ? '🔍' : '🔎'}</span>
-                      <span>
-                        {isHighRisk
-                          ? 'Run Deep AI Investigation'
-                          : 'Run Advanced Credibility Review'}
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+      <div className="p-8 grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Risk Visualization */}
+        <div className="lg:col-span-4 border-r-0 lg:border-r-[3px] border-gray-200 pr-0 lg:pr-8">
+          <div className="section-label mb-6">Risk Assessment</div>
+          <div className="flex justify-center py-4">
+            <RiskMeter
+              label={label}
+              riskScore={riskScore}
+              mlReasonCount={mlReasonCount}
+              hasPositiveSignals={hasPositiveSignals}
+            />
           </div>
         </div>
+
+        {/* Analysis Details */}
+        <div className="lg:col-span-8 space-y-6">
+          <div>
+            <div className="section-label mb-4">Key Findings</div>
+            <div className="grid grid-cols-1 gap-3">
+              {mlReasoning.map((reason, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: 10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.03 }}
+                  className="flex items-start gap-4 p-4 border-[3px] border-gray-900 bg-white hover:shadow-brutal transition-all"
+                >
+                  <span className="text-xs font-black text-white bg-primary w-7 h-7 flex items-center justify-center border-[3px] border-gray-900 flex-shrink-0 shadow-brutal">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm font-semibold text-gray-800 leading-relaxed flex-1">
+                    {reason}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {onRunDeepReview && !hasAIAnalysis && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={onRunDeepReview}
+                disabled={isDeepLoading}
+                className="btn-primary w-full md:w-auto flex items-center justify-center gap-3"
+              >
+                {isDeepLoading ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent animate-spin" />
+                    <span>Running Analysis...</span>
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <span>{isHighRisk ? 'Run Deep AI Analysis' : 'Run Advanced Review'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
 

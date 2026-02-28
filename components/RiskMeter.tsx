@@ -1,7 +1,5 @@
 'use client';
 
-import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
-import 'react-circular-progressbar/dist/styles.css';
 import type { FinalLabel } from '@/lib/types';
 
 interface RiskMeterProps {
@@ -15,51 +13,49 @@ interface RiskMeterProps {
 export default function RiskMeter({
   label,
   riskScore,
-  mlReasonCount,
-  hasPositiveSignals,
   className = '',
 }: RiskMeterProps) {
-  let percentage: number;
-
-  if (riskScore !== undefined) {
-    // If we have an exact score from arbitration, use it.
-    percentage = Math.round(riskScore * 100);
-  } else if (label === 'FAKE' || label === 'CRITICAL_RISK' || label === 'HIGH_RISK') {
-    // Heuristic fallback for legacy/basic mode
-    percentage = 60 + mlReasonCount * 10;
-    percentage = Math.min(percentage, 95);
-  } else {
-    // Heuristic fallback for low risk
-    percentage = 15;
-    if (hasPositiveSignals) {
-      percentage += 5;
-    }
-    percentage = Math.min(percentage, 35);
-  }
+  const percentage = riskScore !== undefined ? Math.round(riskScore * 100) : 50;
 
   const isHighRisk = label === 'HIGH_RISK' || label === 'CRITICAL_RISK' || label === 'FAKE';
   const isModerateRisk = label === 'MODERATE_RISK';
 
-  const color = isHighRisk ? '#ef4444' : isModerateRisk ? '#f59e0b' : '#10b981';
-  const trailColor = isHighRisk ? '#fee2e2' : isModerateRisk ? '#fef3c7' : '#d1fae5';
+  const riskColor = isHighRisk
+    ? 'bg-risk-red'
+    : isModerateRisk
+      ? 'bg-risk-yellow'
+      : 'bg-risk-green';
 
   return (
-    <div className={`flex flex-col items-center ${className}`}>
-      <div className="w-32 h-32">
-        <CircularProgressbar
-          value={percentage}
-          text={`${percentage}%`}
-          styles={buildStyles({
-            pathColor: color,
-            textColor: color,
-            trailColor: trailColor,
-            textSize: '20px',
-          })}
+    <div className={`w-full max-w-[240px] flex flex-col items-center gap-6 ${className}`}>
+      {/* Risk Gauge */}
+      <div className="relative w-full aspect-square border-[3px] border-gray-900 bg-white flex items-center justify-center overflow-hidden shadow-brutal">
+        {/* Inner Percentage Display */}
+        <div className="relative z-10 flex flex-col items-center">
+          <span className="text-7xl font-black tracking-tight leading-none text-gray-900">
+            {percentage}
+          </span>
+          <span className="text-xs font-black uppercase tracking-wider mt-3 text-gray-600">
+            Risk Score
+          </span>
+        </div>
+
+        {/* Background Fill */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 transition-all duration-1000 ease-out ${riskColor}`}
+          style={{ height: `${percentage}%`, opacity: 0.15 }}
+        />
+
+        {/* Indicator Line */}
+        <div
+          className={`absolute bottom-0 left-0 right-0 h-[3px] ${riskColor} transition-all duration-1000 ease-out`}
+          style={{ bottom: `${percentage}%` }}
         />
       </div>
-      <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">
-        Risk Level
-      </p>
+
+      <div className="badge-risk bg-gray-100 text-gray-700 border-gray-300">
+        Analysis Complete
+      </div>
     </div>
   );
 }

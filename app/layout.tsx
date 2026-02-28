@@ -3,28 +3,12 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Toaster } from 'react-hot-toast';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'], weight: ['400', '500', '700', '900'] });
 
 export const metadata: Metadata = {
-  title: 'ScamRadar - AI-Powered Fake Job Detection',
-  description:
-    'Protect yourself from job scams with AI-powered ML and Gemini deep analysis. Detect fake job postings instantly.',
-  keywords: ['job scam', 'fake job', 'scam detection', 'AI', 'ML', 'Gemini'],
-  authors: [{ name: 'ScamRadar Team' }],
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=5',
-  themeColor: '#3b82f6',
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'ScamRadar',
-  },
-  openGraph: {
-    title: 'ScamRadar - AI-Powered Fake Job Detection',
-    description:
-      'Protect yourself from job scams with AI-powered ML and Gemini deep analysis.',
-    type: 'website',
-  },
+  title: 'SCAMRADAR // AI FRAUD DETECTION',
+  description: 'Refined AI-powered analysis for job seekers.',
+  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
 };
 
 export default function RootLayout({
@@ -34,29 +18,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <head>
-        <link rel="icon" href="/icon-192x192.png" />
-        <link rel="apple-touch-icon" href="/icon-512x512.png" />
-      </head>
-      <body className={`${inter.className} antialiased`}>
+      <body className={`${inter.className} bg-white text-black antialiased selection:bg-primary selection:text-white`}>
         {children}
         <Toaster
-          position="top-center"
+          position="bottom-right"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#1f2937',
-              color: '#fff',
+              background: '#FFFFFF',
+              color: '#000000',
+              border: '2px solid #000000',
+              borderRadius: '0px',
+              fontWeight: '700',
+              fontSize: '14px',
+              boxShadow: '2px 2px 0px 0px #000000',
             },
             success: {
               iconTheme: {
-                primary: '#10b981',
-                secondary: '#fff',
-              },
-            },
-            error: {
-              iconTheme: {
-                primary: '#ef4444',
+                primary: '#002395',
                 secondary: '#fff',
               },
             },
@@ -66,6 +45,9 @@ export default function RootLayout({
     </html>
   );
 }
+
+
+
 
 
 

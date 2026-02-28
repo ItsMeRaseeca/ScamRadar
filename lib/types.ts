@@ -46,6 +46,14 @@ export interface ScanHistoryItem {
 
 export type ScanMode = 'quick' | 'detailed';
 
+export interface ImageAnalysisResponse {
+  extracted_text: string;
+  analysis: DeepAnalysisResponse;
+}
+
+
+
+
 
 
 

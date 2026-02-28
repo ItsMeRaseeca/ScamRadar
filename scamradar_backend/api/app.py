@@ -1,8 +1,5 @@
-from __future__ import annotations
-
 import logging
 import os
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -85,24 +82,89 @@ def get_risk_label(score: float) -> str:
     return "CRITICAL_RISK"
 
 
+def run_analysis_pipeline(
+    title: str = "",
+    description: str = "",
+    requirements: str = "",
+    company_profile: str = "",
+    salary_range: str = "",
+    employment_type: str = "",
+    deep_review: bool = False
+) -> DeepAnalysisResponse:
+    """Core analysis logic reused by all endpoints."""
+    if _predictor is None:
+        raise HTTPException(status_code=503, detail="Model not loaded.")
+
+    # Step 1: ML + Rule Engine
+    ml_result = _predictor.predict(
+        title=title,
+        description=description,
+        requirements=requirements,
+        company_profile=company_profile,
+        salary_range=salary_range,
+        employment_type=employment_type,
+    )
+
+    ml_prob = ml_result.score
+    rule_score = ml_result.rule_score
+    threshold = ml_result.threshold
+    margin = abs(ml_prob - threshold)
+
+    # Step 2: Trigger Gemini Decision
+    LOW_CONFIDENCE_MARGIN = 0.10
+    should_run_gemini = bool(deep_review)
+    if not should_run_gemini and margin < LOW_CONFIDENCE_MARGIN:
+        should_run_gemini = True
+
+    # Step 3: Conditional Gemini Analysis
+    ai_analysis_dict = None
+    gemini_risk_level = None
+    if should_run_gemini:
+        # Cache key based on input text
+        cache_key = " ".join(filter(None, [title, description, requirements])).strip() or None
+        
+        gemini_result = analyze_job_with_gemini(
+            title=title,
+            description=description,
+            requirements=requirements,
+            company_profile=company_profile,
+            salary_range=salary_range,
+            employment_type=employment_type,
+            cache_key=cache_key,
+        )
+        ai_analysis_dict = create_ai_analysis_object(gemini_result)
+        if ai_analysis_dict:
+            gemini_risk_level = ai_analysis_dict.get("risk_level")
+
+    # Step 4: Arbitration
+    final_score = compute_final_risk(ml_prob, rule_score, gemini_risk_level)
+    final_label = get_risk_label(final_score)
+
+
+    return DeepAnalysisResponse(
+        ml_probability=ml_prob,
+        rule_score=rule_score,
+        gemini_risk_level=gemini_risk_level,
+        final_risk_score=final_score,
+        final_label=final_label,
+        ml_reasoning=ml_result.reasoning,
+        ai_analysis=AIAnalysis(**ai_analysis_dict) if ai_analysis_dict else None,
+    )
+
+
 @app.post("/predict", response_model=PredictResponse)
 def predict(req: PredictRequest) -> PredictResponse:
     if _predictor is None:
-        raise HTTPException(status_code=503, detail="Model not loaded. Train and restart the service.")
+        raise HTTPException(status_code=503, detail="Model not loaded.")
 
-    try:
-        res = _predictor.predict(
-            title=req.title,
-            description=req.description,
-            requirements=req.requirements,
-            company_profile=req.company_profile,
-            salary_range=req.salary_range,
-            employment_type=req.employment_type,
-        )
-    except Exception as e:
-        logger.exception("Prediction failed")
-        raise HTTPException(status_code=500, detail="Prediction failed") from e
-
+    res = _predictor.predict(
+        title=req.title,
+        description=req.description,
+        requirements=req.requirements,
+        company_profile=req.company_profile,
+        salary_range=req.salary_range,
+        employment_type=req.employment_type,
+    )
     return PredictResponse(
         final_label=res.final_label,
         reasoning=res.reasoning,
@@ -112,87 +174,17 @@ def predict(req: PredictRequest) -> PredictResponse:
 
 @app.post("/deep-analysis", response_model=DeepAnalysisResponse)
 def deep_analysis(req: DeepAnalysisRequest) -> DeepAnalysisResponse:
-    if _predictor is None:
-        raise HTTPException(
-            status_code=503, detail="Model not loaded. Train and restart the service."
-        )
-
     try:
-        # Step 1: Get ML prediction and Rule score
-        ml_result = _predictor.predict(
+        return run_analysis_pipeline(
             title=req.title or "",
             description=req.description or "",
             requirements=req.requirements or "",
             company_profile=req.company_profile or "",
             salary_range=req.salary_range or "",
             employment_type=req.employment_type or "",
+            deep_review=req.deep_review or False
         )
-
-        ml_prob = ml_result.score
-        rule_score = ml_result.rule_score
-        threshold = ml_result.threshold
-        margin = abs(ml_prob - threshold)
-
-        # Step 2: Decide whether to run Gemini
-        LOW_CONFIDENCE_MARGIN = 0.10
-        should_run_gemini = bool(req.deep_review)
-        if not should_run_gemini and margin < LOW_CONFIDENCE_MARGIN:
-            should_run_gemini = True
-
-        # Prepare cache key for Gemini
-        joined_text = " ".join(filter(None, [
-            req.title, req.description, req.requirements,
-            req.company_profile, req.salary_range, req.employment_type
-        ])).strip()
-        cache_key = joined_text or None
-
-        # Step 3: Run Gemini if triggered
-        ai_analysis_dict = None
-        gemini_risk_level = None
-        if should_run_gemini:
-            logger.info(
-                "Triggering Gemini Analysis (ML Prob=%.3f, Rule Score=%.3f, Margin=%.3f)",
-                ml_prob, rule_score, margin
-            )
-            gemini_result = analyze_job_with_gemini(
-                title=req.title or "",
-                description=req.description or "",
-                requirements=req.requirements or "",
-                company_profile=req.company_profile or "",
-                salary_range=req.salary_range or "",
-                employment_type=req.employment_type or "",
-                cache_key=cache_key,
-            )
-            ai_analysis_dict = create_ai_analysis_object(gemini_result)
-            if ai_analysis_dict:
-                gemini_risk_level = ai_analysis_dict.get("risk_level")
-                logger.info("Gemini Analysis result: %s", gemini_risk_level)
-
-        # Step 4: Perform Arbitration
-        final_score = compute_final_risk(ml_prob, rule_score, gemini_risk_level)
-        final_label = get_risk_label(final_score)
-
-        logger.info(
-            "Arbitration Complete: ML=%.3f, Rule=%.3f, Gemini=%s -> Final Score=%.3f (%s)",
-            ml_prob, rule_score, gemini_risk_level or "N/A", final_score, final_label
-        )
-
-        # Step 5: Build response
-        return DeepAnalysisResponse(
-            ml_probability=ml_prob,
-            rule_score=rule_score,
-            gemini_risk_level=gemini_risk_level,
-            final_risk_score=final_score,
-            final_label=final_label,
-            ml_reasoning=ml_result.reasoning,
-            ai_analysis=AIAnalysis(**ai_analysis_dict) if ai_analysis_dict else None,
-        )
-
     except Exception as e:
         logger.exception("Deep analysis failed")
-        raise HTTPException(status_code=500, detail="Deep analysis failed") from e
-
-    except Exception as e:
-        logger.exception("Deep analysis failed")
-        raise HTTPException(status_code=500, detail="Deep analysis failed") from e
+        raise HTTPException(status_code=500, detail=str(e))
 

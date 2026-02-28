@@ -1,8 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
+import Navbar from '@/components/landing/Navbar';
+import HeroSection from '@/components/landing/HeroSection';
+import ProblemSection from '@/components/landing/ProblemSection';
+import SolutionSection from '@/components/landing/SolutionSection';
+import FeaturesSection from '@/components/landing/FeaturesSection';
+import ArchitectureSection from '@/components/landing/ArchitectureSection';
+import DemoSection from '@/components/landing/DemoSection';
+import CTASection from '@/components/landing/CTASection';
+import FooterSection from '@/components/landing/FooterSection';
 import AnalyzerForm from '@/components/AnalyzerForm';
 import ResultCard from '@/components/ResultCard';
 import AIAnalysisSection from '@/components/AIAnalysisSection';
@@ -38,11 +47,9 @@ export default function Home() {
     setLastRequest(data);
 
     try {
-      // First run: ML-only deep analysis (Gemini optional)
       const response = await analyzeJobDeep(data, false);
       setResult(response);
 
-      // Save to history
       const preview = data.description.slice(0, 100) || data.title || 'Untitled';
       saveScanHistory({
         preview,
@@ -52,19 +59,10 @@ export default function Home() {
         ai_analysis: response.ai_analysis,
       });
 
-      // Scroll to results
-      setTimeout(() => {
-        document.getElementById('results')?.scrollIntoView({
-          behavior: 'smooth',
-          block: 'start',
-        });
-      }, 100);
-
-      toast.success('Analysis complete!');
+      toast.success('DIAGNOSTIC SCAN COMPLETE.');
     } catch (error) {
       console.error('Deep analysis failed, trying basic ML:', error);
 
-      // Fallback to basic ML prediction
       try {
         const basicResponse = await analyzeJobBasic(data);
         const fallbackResult: DeepAnalysisResponse = {
@@ -78,7 +76,6 @@ export default function Home() {
         };
         setResult(fallbackResult);
 
-        // Save to history
         const preview = data.description.slice(0, 100) || data.title || 'Untitled';
         saveScanHistory({
           preview,
@@ -88,21 +85,9 @@ export default function Home() {
           ai_analysis: null,
         });
 
-        toast.success('ML analysis complete (AI analysis unavailable)');
-
-        setTimeout(() => {
-          document.getElementById('results')?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'start',
-          });
-        }, 100);
+        toast.success('ML SCAN DONE. AI OFFLINE.');
       } catch (fallbackError) {
-        console.error('Basic analysis also failed:', fallbackError);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : 'Failed to analyze job posting. Please try again.'
-        );
+        toast.error('TOTAL SYSTEM FAILURE.');
       }
     } finally {
       setIsLoading(false);
@@ -114,19 +99,13 @@ export default function Home() {
       ml_probability: 0,
       rule_score: 0,
       gemini_risk_level: item.ai_analysis?.risk_level || null,
-      final_risk_score: 0, // We could derive this if saved in history, but 0 is safe for now
+      final_risk_score: 0,
       final_label: item.result,
       ml_reasoning: item.ml_reasoning,
       ai_analysis: item.ai_analysis,
     };
     setResult(historyResult);
-
-    setTimeout(() => {
-      document.getElementById('results')?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'start',
-      });
-    }, 100);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleRunDeepReview = async () => {
@@ -137,7 +116,6 @@ export default function Home() {
       const response = await analyzeJobDeep(lastRequest, true);
       setResult(response);
 
-      // Update history with AI analysis as a new entry
       const preview =
         lastRequest.description.slice(0, 100) ||
         lastRequest.title ||
@@ -151,143 +129,112 @@ export default function Home() {
       });
 
       if (response.ai_analysis) {
-        toast.success('Deep AI investigation complete.');
+        toast.success('ADVANCED HEURISTICS CAPTURED.');
       } else {
-        toast.error(
-          'Advanced AI analysis is temporarily unavailable. Showing ML results only.'
-        );
+        toast.error('AI REFUSED TO COMPLY.');
       }
     } catch (error) {
-      console.error('Deep AI review failed:', error);
-      toast.error(
-        'Advanced AI analysis is temporarily unavailable. Showing ML results only.'
-      );
+      toast.error('AI CONNECTION SEVERED.');
     } finally {
       setIsDeepLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🛡️</span>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  ScamRadar
-                </h1>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  AI-Powered Fake Job Detection
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => setHistoryOpen(true)}
-              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              aria-label="Open history"
-            >
-              <svg
-                className="w-6 h-6 text-gray-600 dark:text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </button>
+    <div className="bg-gray-50 min-h-screen">
+      {/* Landing Page Sections */}
+      <Navbar onHistoryClick={() => setHistoryOpen(true)} />
+      <HeroSection />
+      <ProblemSection />
+      <SolutionSection />
+      <FeaturesSection />
+      <ArchitectureSection />
+      <DemoSection />
+      <CTASection />
+
+      {/* Analyzer Section */}
+      <section id="analyzer" className="neo-section border-b-[3px] border-gray-900 bg-white scroll-mt-24">
+        <div className="neo-container">
+          <div className="mb-12">
+            <div className="neo-label mb-3">Try It Now</div>
+            <h2 className="neo-heading-lg text-gray-900">Analyze a Job Posting</h2>
           </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            AI-Powered Fake Job Detection
-          </h2>
-          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Hybrid ML + Gemini AI analysis for job scam protection. Paste any job
-            posting and get instant risk assessment with detailed explanations.
-          </p>
-        </motion.div>
-
-        {/* Analyzer Form */}
-        <div className="mb-12">
           <AnalyzerForm onAnalyze={handleAnalyze} isLoading={isLoading} />
         </div>
+      </section>
 
-        {/* Results Section */}
+      {/* Results Section */}
+      <AnimatePresence>
         {result && (
-          <div id="results" className="space-y-6">
-            {/* ML Result Card */}
-            <ResultCard
-              label={result.final_label}
-              mlReasoning={result.ml_reasoning}
-              riskScore={result.final_risk_score}
-              hasAIAnalysis={!!result.ai_analysis}
-              onRunDeepReview={handleRunDeepReview}
-              isDeepLoading={isDeepLoading}
-            />
-
-            {/* AI Analysis Section */}
-            {result.ai_analysis ? (
-              <AIAnalysisSection analysis={result.ai_analysis} />
-            ) : (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="rounded-2xl bg-gray-100 dark:bg-gray-800 border-2 border-gray-300 dark:border-gray-700 p-6 text-center"
-              >
-                <p className="text-gray-600 dark:text-gray-400">
-                  This posting appears structurally sound. No advanced fraud
-                  signals were detected by the AI system.
-                </p>
-              </motion.div>
-            )}
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!result && !isLoading && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-center py-16 text-gray-500 dark:text-gray-400"
+          <motion.section
+            id="results"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="neo-section border-b-[3px] border-gray-900 bg-white"
           >
-            <p className="text-lg">Enter a job posting above to get started.</p>
-          </motion.div>
-        )}
-      </main>
+            <div className="neo-container">
+              <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-6 mb-12">
+                <h2 className="neo-heading-lg text-gray-900">Analysis Results</h2>
+                <div className="flex-grow h-[3px] bg-gray-900" />
+                {result.final_risk_score !== undefined && (
+                  <div className="badge-risk bg-gray-900 text-white">
+                    Risk Score: {Math.round(result.final_risk_score * 100)}%
+                  </div>
+                )}
+              </div>
 
-      {/* History Sidebar */}
+              <ResultCard
+                label={result.final_label}
+                mlReasoning={result.ml_reasoning}
+                riskScore={result.final_risk_score}
+                hasAIAnalysis={!!result.ai_analysis}
+                onRunDeepReview={handleRunDeepReview}
+                isDeepLoading={isDeepLoading}
+              />
+
+              <AnimatePresence mode="wait">
+                {result.ai_analysis && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-12"
+                  >
+                    <AIAnalysisSection analysis={result.ai_analysis} />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      {/* Empty State */}
+      {!result && !isLoading && (
+        <section className="neo-section border-b-[3px] border-gray-900 bg-gray-100">
+          <div className="neo-container">
+            <div className="border-[3px] border-dashed border-gray-400 p-20 text-center bg-white">
+              <p className="text-2xl md:text-3xl font-black uppercase tracking-tight text-gray-400">
+                Ready to Analyze
+              </p>
+              <p className="text-sm font-medium text-gray-500 mt-3">
+                Paste a job posting above to get started
+              </p>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Footer */}
+      <FooterSection />
+
       <HistorySidebar
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
         onSelectItem={handleSelectHistoryItem}
       />
-
-      {/* Footer */}
-      <footer className="mt-16 py-8 border-t border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-600 dark:text-gray-400">
-          <p>ScamRadar - Protecting job seekers from scams</p>
-          <p className="text-sm mt-2">
-            Powered by ML + Gemini AI
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
-
