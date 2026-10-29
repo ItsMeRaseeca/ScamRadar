@@ -61,10 +61,10 @@ build/
 *.swo
 *~
 
-
-
-
-
-
-
-
+# Datasets and Large Data Files (Keep repo lightweight)
+*.csv
+*.tsv
+*.parquet
+*.sqlite
+*.db
+!scamradar_backend/data/.gitkeep

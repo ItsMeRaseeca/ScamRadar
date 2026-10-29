@@ -26,7 +26,7 @@ python -m scamradar_backend.training.train
 ```
 
 This will:
-- Load the dataset from `scamradar_backend/data/fake_job_postings.csv`
+- Load the dataset from `scamradar_backend/data/fake_job_postings.csv` (run `python scripts/download_dataset.py` to download)
 - Train Logistic Regression and Random Forest models
 - Save artifacts to `scamradar_backend/models/`
 - Print F1 scores and confusion matrices

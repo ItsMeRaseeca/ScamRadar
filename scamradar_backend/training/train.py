@@ -116,7 +116,7 @@ def main() -> None:
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
 
     if not DATASET_PATH.exists():
-        raise FileNotFoundError(f"Dataset not found at: {DATASET_PATH}")
+        raise FileNotFoundError(f"Dataset not found at: {DATASET_PATH}. Run 'python scripts/download_dataset.py' to obtain it.")
 
     logger.info("Loading dataset: %s", DATASET_PATH)
     df = pd.read_csv(DATASET_PATH)
