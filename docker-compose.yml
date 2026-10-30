@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  scamradar-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: scamradar-api
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - FRONTEND_ORIGIN=${FRONTEND_ORIGIN:-http://localhost:3000}
+      - PORT=8000
+    restart: unless-stopped
+

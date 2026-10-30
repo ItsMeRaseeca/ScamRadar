@@ -1,0 +1,16 @@
+.git
+.github
+node_modules
+.next
+*.md
+.env*
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.csv
+*.parquet
+*.sqlite
+.pytest_cache
+coverage
+

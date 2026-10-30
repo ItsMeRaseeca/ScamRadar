@@ -26,9 +26,9 @@ const DemoSection = () => {
             <div className="neo-card-flat p-4 bg-gray-100">
               <div className="neo-label mb-2">Job Posting Input</div>
               <p className="text-sm italic text-gray-600 leading-relaxed">
-                "Urgent Hiring! Work from home, earn $5,000/week. No experience needed.
+                &ldquo;Urgent Hiring! Work from home, earn $5,000/week. No experience needed.
                 Contact us on Telegram @quickjobs2024. Limited spots available — apply now
-                before positions fill up!"
+                before positions fill up!&rdquo;
               </p>
             </div>
 
@@ -69,7 +69,7 @@ const DemoSection = () => {
                 <XCircle className="h-4 w-4 text-risk-red mt-0.5 shrink-0" />
                 <div>
                   <span className="font-black text-sm">Urgency Manipulation</span>
-                  <p className="text-xs text-gray-600 mt-0.5">Pressure tactics detected: "Limited spots", "apply now"</p>
+                  <p className="text-xs text-gray-600 mt-0.5">Pressure tactics detected: &ldquo;Limited spots&rdquo;, &ldquo;apply now&rdquo;</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-3 neo-card-flat">
@@ -88,4 +88,3 @@ const DemoSection = () => {
 };
 
 export default DemoSection;
-

@@ -4,9 +4,11 @@
 
 **Protect yourself from recruitment fraud with transparent, AI-driven analysis**
 
+[![CI](https://github.com/ItsMeRaseeca/ScamRadar/actions/workflows/ci.yml/badge.svg)](https://github.com/ItsMeRaseeca/ScamRadar/actions)
+[![Tests](https://img.shields.io/badge/Tests-40%20Passing-brightgreen)](tests/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](Dockerfile)
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
-[![Python](https://img.shields.io/badge/Python-3.10+-blue)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)](https://fastapi.tiangolo.com/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green)](https://fastapi.tiangolo.com/)
 [![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
 
 [Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [API](#-api-documentation) • [Architecture](#-architecture)
@@ -109,10 +111,21 @@ Final Risk Score (Weighted aggregation with explanation)
 
 ### Quick Start
 
+### Running Automated Tests
+```bash
+pytest -v
+```
+
+### Running with Docker (Recommended)
+```bash
+docker compose up --build
+```
+
+
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd "ScamRadar Reborn"
+   cd ScamRadar
    ```
 
 2. **Backend Setup**
