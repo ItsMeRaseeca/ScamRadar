@@ -45,9 +45,11 @@ _predictor: ScamRadarPredictor | None = None
 @app.get("/health")
 def health_check() -> dict[str, str | bool]:
     """Health check endpoint for container orchestrators and uptime probes."""
+    has_gemini = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
     return {
         "status": "healthy",
         "model_loaded": _predictor is not None,
+        "gemini_configured": has_gemini,
     }
 
 
