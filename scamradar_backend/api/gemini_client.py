@@ -1,7 +1,7 @@
 """
 Gemini AI client for deep analysis of fake job postings.
 Requires GOOGLE_API_KEY environment variable.
-Updated to use the modern google-genai SDK and Gemini 2.0.
+Updated to use the modern google-genai SDK with dynamic model discovery.
 """
 
 from __future__ import annotations
@@ -42,8 +42,13 @@ _RATE_MAX_CALLS = 10  # local safeguard before hitting remote free-tier limits
 _CALL_TIMESTAMPS: deque[float] = deque()
 
 _QUOTA_EXHAUSTED_UNTIL: float | None = None
-
 _ANALYSIS_CACHE: dict[str, dict[str, str]] = {}
+_LAST_GEMINI_ERROR: str | None = None
+_CACHED_MODELS: list[str] = []
+
+
+def get_last_gemini_error() -> str | None:
+    return _LAST_GEMINI_ERROR
 
 
 def _can_call_gemini() -> bool:
@@ -77,6 +82,50 @@ def _can_call_gemini() -> bool:
     return True
 
 
+def _get_model_candidates(client: genai.Client) -> list[str]:
+    """Dynamically discover valid models for the API key, or fall back to defaults."""
+    global _CACHED_MODELS
+    if _CACHED_MODELS:
+        return _CACHED_MODELS
+
+    env_model = os.getenv("GEMINI_MODEL")
+    discovered: list[str] = []
+
+    try:
+        # Dynamically query available models for this specific API key
+        for m in client.models.list():
+            actions = getattr(m, "supported_actions", []) or []
+            if "generateContent" in actions or "generate_content" in actions:
+                m_name = m.name.replace("models/", "") if m.name else ""
+                if m_name:
+                    discovered.append(m_name)
+        logger.info("Discovered %d models supporting generateContent: %s", len(discovered), discovered[:5])
+    except Exception as e_list:
+        logger.warning("Could not dynamically list models: %s", e_list)
+
+    # Sort discovered models: prioritize flash models, then others
+    flash_models = [m for m in discovered if "flash" in m.lower()]
+    other_models = [m for m in discovered if "flash" not in m.lower()]
+    ordered_discovered = flash_models + other_models
+
+    defaults = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+    ]
+
+    all_candidates = []
+    if env_model:
+        all_candidates.append(env_model)
+    all_candidates.extend(ordered_discovered)
+    all_candidates.extend(defaults)
+
+    # Deduplicate while preserving order
+    seen = set()
+    _CACHED_MODELS = [m for m in all_candidates if m and not (m in seen or seen.add(m))]
+    return _CACHED_MODELS
+
+
 def analyze_job_with_gemini(
     title: str,
     description: str,
@@ -89,20 +138,18 @@ def analyze_job_with_gemini(
 ) -> dict[str, str] | None:
     """
     Use Gemini AI to perform deep analysis of a job posting.
-
-    Protections:
-    - In-memory caching keyed by `cache_key` (same posting => no extra calls)
-    - Local rate limiting to avoid burning free-tier quota
-    - Quota exhaustion detection with temporary cooldown
-    - Logging of prompt size and quota errors
     """
+    global _LAST_GEMINI_ERROR
+
     if not GEMINI_AVAILABLE:
-        logger.warning("Gemini library (google-genai) not available")
+        _LAST_GEMINI_ERROR = "google-genai SDK not installed."
+        logger.warning(_LAST_GEMINI_ERROR)
         return None
 
     api_key = _get_api_key()
     if not api_key:
-        logger.warning("Neither GOOGLE_API_KEY nor GEMINI_API_KEY is set in environment.")
+        _LAST_GEMINI_ERROR = "Neither GOOGLE_API_KEY nor GEMINI_API_KEY is set in environment."
+        logger.warning(_LAST_GEMINI_ERROR)
         return None
 
     if cache_key and cache_key in _ANALYSIS_CACHE:
@@ -110,13 +157,14 @@ def analyze_job_with_gemini(
         return _ANALYSIS_CACHE[cache_key]
 
     if not _can_call_gemini():
+        _LAST_GEMINI_ERROR = "Rate limit or quota cooldown active."
         return None
 
     try:
-        # Initialize the new SDK client
+        # Initialize client
         client = genai.Client(api_key=api_key)
 
-        # Build comprehensive prompt
+        # Build prompt
         job_text = (
             f"Job Title: {title}\n"
             f"Description: {description}\n"
@@ -144,20 +192,11 @@ Job Posting:
 {job_text}
 """
 
-        candidates = [
-            os.getenv("GEMINI_MODEL"),
-            "gemini-3.8-flash",
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-        ]
-        # Deduplicate while preserving order
-        seen = set()
-        model_candidates = [m for m in candidates if m and not (m in seen or seen.add(m))]
-
+        candidates = _get_model_candidates(client)
         response = None
-        last_error = None
-        for cand in model_candidates:
+        last_err = None
+
+        for cand in candidates:
             try:
                 logger.info("Attempting Gemini generation with model: %s", cand)
                 response = client.models.generate_content(
@@ -165,14 +204,16 @@ Job Posting:
                     contents=prompt,
                 )
                 logger.info("Successfully received Gemini response using model: %s", cand)
+                # Pin this successful model to the front of candidate list for future calls
+                _CACHED_MODELS = [cand] + [m for m in candidates if m != cand]
                 break
             except Exception as e_cand:
-                last_error = e_cand
+                last_err = e_cand
                 logger.warning("Model %s failed: %s. Trying next candidate...", cand, e_cand)
 
         if response is None:
-            if last_error:
-                raise last_error
+            if last_err:
+                raise last_err
             return None
 
         response_text = response.text.strip()
@@ -197,7 +238,6 @@ Job Posting:
         ]
         for key in required_keys:
             if key not in analysis_dict:
-                logger.warning(f"Gemini response missing key: {key}")
                 if key == "risk_level":
                     analysis_dict[key] = "MODERATE"
                 elif key == "confidence":
@@ -208,19 +248,16 @@ Job Posting:
         if cache_key:
             _ANALYSIS_CACHE[cache_key] = analysis_dict
 
+        _LAST_GEMINI_ERROR = None
         return analysis_dict
 
     except Exception as e:
-        # Detect quota / rate errors explicitly
         msg = str(e)
+        _LAST_GEMINI_ERROR = msg
         if "RESOURCE_EXHAUSTED" in msg or "Quota exceeded" in msg or "429" in msg:
             global _QUOTA_EXHAUSTED_UNTIL
-            _QUOTA_EXHAUSTED_UNTIL = time.time() + 60  # 1-minute cooldown
-            logger.warning(
-                "Gemini quota exhausted or rate-limited. "
-                "Applying cooldown before next attempt. Raw error: %s",
-                msg,
-            )
+            _QUOTA_EXHAUSTED_UNTIL = time.time() + 60
+            logger.warning("Gemini quota exhausted or rate-limited: %s", msg)
         else:
             logger.exception("Gemini analysis failed: %s", msg)
         return None

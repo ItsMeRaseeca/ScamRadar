@@ -18,6 +18,7 @@ from scamradar_backend.api.schemas import (
 from scamradar_backend.api.gemini_client import (
     analyze_job_with_gemini,
     create_ai_analysis_object,
+    get_last_gemini_error,
 )
 from scamradar_backend.utils.logging import configure_logging
 
@@ -43,13 +44,14 @@ _predictor: ScamRadarPredictor | None = None
 
 
 @app.get("/health")
-def health_check() -> dict[str, str | bool]:
+def health_check() -> dict[str, str | bool | None]:
     """Health check endpoint for container orchestrators and uptime probes."""
     has_gemini = bool(os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"))
     return {
         "status": "healthy",
         "model_loaded": _predictor is not None,
         "gemini_configured": has_gemini,
+        "last_gemini_error": get_last_gemini_error(),
     }
 
 
