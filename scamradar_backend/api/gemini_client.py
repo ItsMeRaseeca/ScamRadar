@@ -144,32 +144,36 @@ Job Posting:
 {job_text}
 """
 
-        # Log prompt size and approximate tokens if available
-        prompt_chars = len(prompt)
-        approx_tokens = None
-        model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
+        candidates = [
+            os.getenv("GEMINI_MODEL"),
+            "gemini-3.8-flash",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+        ]
+        # Deduplicate while preserving order
+        seen = set()
+        model_candidates = [m for m in candidates if m and not (m in seen or seen.add(m))]
 
-        try:
-            token_count = client.models.count_tokens(
-                model=model_name, contents=prompt
-            )
-            approx_tokens = getattr(token_count, "total_tokens", None)
-        except Exception:
-            approx_tokens = None  # best-effort only
+        response = None
+        last_error = None
+        for cand in model_candidates:
+            try:
+                logger.info("Attempting Gemini generation with model: %s", cand)
+                response = client.models.generate_content(
+                    model=cand,
+                    contents=prompt,
+                )
+                logger.info("Successfully received Gemini response using model: %s", cand)
+                break
+            except Exception as e_cand:
+                last_error = e_cand
+                logger.warning("Model %s failed: %s. Trying next candidate...", cand, e_cand)
 
-        logger.info(
-            "Calling Gemini (model=%s, chars=%d, tokens≈%s, cache_key=%s)",
-            model_name,
-            prompt_chars,
-            str(approx_tokens) if approx_tokens is not None else "n/a",
-            cache_key[:12] if cache_key else "none",
-        )
-
-        # Call Gemini
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt,
-        )
+        if response is None:
+            if last_error:
+                raise last_error
+            return None
 
         response_text = response.text.strip()
 
