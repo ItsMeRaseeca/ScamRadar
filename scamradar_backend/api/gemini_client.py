@@ -102,7 +102,7 @@ def analyze_job_with_gemini(
 
     api_key = _get_api_key()
     if not api_key:
-        logger.warning("GOOGLE_API_KEY not set. Skipping Gemini analysis.")
+        logger.warning("Neither GOOGLE_API_KEY nor GEMINI_API_KEY is set in environment.")
         return None
 
     if cache_key and cache_key in _ANALYSIS_CACHE:
@@ -147,26 +147,36 @@ Job Posting:
         # Log prompt size and approximate tokens if available
         prompt_chars = len(prompt)
         approx_tokens = None
+        model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+
         try:
             token_count = client.models.count_tokens(
-                model="gemini-2.5-flash", contents=prompt
+                model=model_name, contents=prompt
             )
             approx_tokens = getattr(token_count, "total_tokens", None)
         except Exception:
             approx_tokens = None  # best-effort only
 
         logger.info(
-            "Calling Gemini (model=gemini-2.5-flash, chars=%d, tokens≈%s, cache_key=%s)",
+            "Calling Gemini (model=%s, chars=%d, tokens≈%s, cache_key=%s)",
+            model_name,
             prompt_chars,
             str(approx_tokens) if approx_tokens is not None else "n/a",
             cache_key[:12] if cache_key else "none",
         )
 
-        # Call Gemini (same pattern as your working console example)
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-        )
+        # Call Gemini with fallback
+        try:
+            response = client.models.generate_content(
+                model=model_name,
+                contents=prompt,
+            )
+        except Exception as e_model:
+            logger.warning("Primary model %s failed: %s. Trying fallback gemini-1.5-flash...", model_name, e_model)
+            response = client.models.generate_content(
+                model="gemini-1.5-flash",
+                contents=prompt,
+            )
 
         response_text = response.text.strip()
 
