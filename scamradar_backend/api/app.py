@@ -25,17 +25,30 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="ScamRadar Backend", version="1.0.0")
 
-# CORS for frontend (Next.js on http://localhost:3000 by default)
-frontend_origin = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+# CORS for frontend (Next.js on http://localhost:3000 by default, or comma-separated list of origins)
+raw_origins = os.getenv("FRONTEND_ORIGIN", "http://localhost:3000")
+allowed_origins = [origin.strip() for origin in raw_origins.split(",") if origin.strip()]
+if not allowed_origins:
+    allowed_origins = ["http://localhost:3000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[frontend_origin],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 _predictor: ScamRadarPredictor | None = None
+
+
+@app.get("/health")
+def health_check() -> dict[str, str | bool]:
+    """Health check endpoint for container orchestrators and uptime probes."""
+    return {
+        "status": "healthy",
+        "model_loaded": _predictor is not None,
+    }
 
 
 @app.on_event("startup")
@@ -57,7 +70,7 @@ def compute_final_risk(ml_prob: float, rule_score: float, gemini_level: str | No
         "LOW": 0.2,
         "MODERATE": 0.5,
         "HIGH": 0.75,
-        "CRITICAL": 0.9
+        "CRITICAL": 0.9,
     }
     gemini_score = gemini_map.get(gemini_level, 0.5) if gemini_level else 0.5
 
@@ -89,7 +102,7 @@ def run_analysis_pipeline(
     company_profile: str = "",
     salary_range: str = "",
     employment_type: str = "",
-    deep_review: bool = False
+    deep_review: bool = False,
 ) -> DeepAnalysisResponse:
     """Core analysis logic reused by all endpoints."""
     if _predictor is None:
@@ -122,7 +135,7 @@ def run_analysis_pipeline(
     if should_run_gemini:
         # Cache key based on input text
         cache_key = " ".join(filter(None, [title, description, requirements])).strip() or None
-        
+
         gemini_result = analyze_job_with_gemini(
             title=title,
             description=description,
@@ -139,7 +152,6 @@ def run_analysis_pipeline(
     # Step 4: Arbitration
     final_score = compute_final_risk(ml_prob, rule_score, gemini_risk_level)
     final_label = get_risk_label(final_score)
-
 
     return DeepAnalysisResponse(
         ml_probability=ml_prob,
@@ -168,7 +180,7 @@ def predict(req: PredictRequest) -> PredictResponse:
     return PredictResponse(
         final_label=res.final_label,
         reasoning=res.reasoning,
-        ml_probability=res.score
+        ml_probability=res.score,
     )
 
 
@@ -182,9 +194,8 @@ def deep_analysis(req: DeepAnalysisRequest) -> DeepAnalysisResponse:
             company_profile=req.company_profile or "",
             salary_range=req.salary_range or "",
             employment_type=req.employment_type or "",
-            deep_review=req.deep_review or False
+            deep_review=req.deep_review or False,
         )
     except Exception as e:
         logger.exception("Deep analysis failed")
         raise HTTPException(status_code=500, detail=str(e))
-

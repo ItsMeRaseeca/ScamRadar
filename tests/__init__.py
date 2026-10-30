@@ -1,0 +1,2 @@
+# ScamRadar Test Suite
+

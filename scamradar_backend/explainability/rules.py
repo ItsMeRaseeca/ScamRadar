@@ -21,7 +21,7 @@ _GENERIC_EMAIL_DOMAINS = {"gmail.com", "yahoo.com", "outlook.com", "hotmail.com"
 _EXCLAMATION_RE = re.compile(r"!{3,}")
 
 # Salary heuristics: detect unusually high weekly/monthly amounts without context.
-_MONEY_RE = re.compile(r"(\$|usd|eur|gbp|₹|inr)\s*([0-9]{2,}(?:[,][0-9]{3})*|[0-9]+)", re.IGNORECASE)
+_MONEY_RE = re.compile(r"(\$|usd|eur|gbp|₹|inr)\s*([0-9]{1,3}(?:[,][0-9]{3})*|[0-9]+)", re.IGNORECASE)
 _HIGH_SALARY_HINTS = re.compile(r"\b(per week|weekly|per day|daily)\b", re.IGNORECASE)
 
 _COMPANY_SECTION_KEYWORDS = [
@@ -115,6 +115,3 @@ def rule_based_red_flags(
                 pass
 
     return RuleReasons(reasons=reasons, score=min(score, 1.0))
-
-
-
