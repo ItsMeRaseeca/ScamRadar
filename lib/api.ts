@@ -1,11 +1,16 @@
 import axios, { AxiosError } from 'axios';
 import type { DeepAnalysisResponse, PredictRequest, PredictResponse } from './types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const RAW_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+
+if (typeof window !== 'undefined') {
+  console.log('[ScamRadar Client] API Base URL:', API_BASE_URL);
+}
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000, // 30 seconds timeout
+  timeout: 45000, // 45 seconds timeout for cold starts / deep AI
   headers: {
     'Content-Type': 'application/json',
   },
@@ -50,23 +55,19 @@ export async function analyzeJobDeep(
         );
       }
     }
-
-    // Unknown error
-    throw new Error(
-      error instanceof Error ? error.message : 'An unexpected error occurred'
-    );
+    throw error;
   }
 }
 
 /**
- * Fallback endpoint - calls basic ML prediction only
- * Used if deep-analysis fails
+ * Calls the /predict endpoint for fast ML scan only (no Gemini AI)
+ * Used as a fallback if Gemini is offline
  */
 export async function analyzeJobBasic(
   data: Partial<PredictRequest>
 ): Promise<PredictResponse> {
   try {
-    const response = await apiClient.post('/predict', {
+    const response = await apiClient.post<PredictResponse>('/predict', {
       title: data.title || '',
       description: data.description || '',
       requirements: data.requirements || '',
@@ -90,11 +91,6 @@ export async function analyzeJobBasic(
         );
       }
     }
-
-    throw new Error(
-      error instanceof Error ? error.message : 'An unexpected error occurred'
-    );
+    throw error;
   }
 }
-
-
