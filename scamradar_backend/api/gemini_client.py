@@ -147,7 +147,7 @@ Job Posting:
         # Log prompt size and approximate tokens if available
         prompt_chars = len(prompt)
         approx_tokens = None
-        model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")
+        model_name = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
         try:
             token_count = client.models.count_tokens(
@@ -165,18 +165,11 @@ Job Posting:
             cache_key[:12] if cache_key else "none",
         )
 
-        # Call Gemini with fallback
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt,
-            )
-        except Exception as e_model:
-            logger.warning("Primary model %s failed: %s. Trying fallback gemini-1.5-flash...", model_name, e_model)
-            response = client.models.generate_content(
-                model="gemini-1.5-flash",
-                contents=prompt,
-            )
+        # Call Gemini
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+        )
 
         response_text = response.text.strip()
 
